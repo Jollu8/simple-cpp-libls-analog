@@ -1,6 +1,0 @@
-/Users/jolluemil/Desktop/cpptasks/simple-cpp-libls-analog/cmake-build-debug/CMakeFiles/CPP.dir
-/Users/jolluemil/Desktop/cpptasks/simple-cpp-libls-analog/cmake-build-debug/CMakeFiles/edit_cache.dir
-/Users/jolluemil/Desktop/cpptasks/simple-cpp-libls-analog/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/Users/jolluemil/Desktop/cpptasks/simple-cpp-libls-analog/cmake-build-debug/variant/CMakeFiles/Variant.dir
-/Users/jolluemil/Desktop/cpptasks/simple-cpp-libls-analog/cmake-build-debug/variant/CMakeFiles/edit_cache.dir
-/Users/jolluemil/Desktop/cpptasks/simple-cpp-libls-analog/cmake-build-debug/variant/CMakeFiles/rebuild_cache.dir

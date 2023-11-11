@@ -1,4 +1,0 @@
-# ninja log v5
-3	1744	1699706553755298629	variant/CMakeFiles/Variant.dir/main.cpp.o	3b800c1b7fcb1fea
-1744	1961	1699706553974876143	variant/Variant	aec3795225862c35
-2	251	1699733878334840747	tcp/src/CMakeFiles/SimpleNetwork.dir/TCPClient.cpp.o	9e1842360341e3f0
