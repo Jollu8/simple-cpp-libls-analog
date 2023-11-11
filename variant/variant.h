@@ -3,147 +3,256 @@ Copyright (c) 2015 Jollu Emil.
 All rights reserved.
  */
 
+
+
 #pragma once
 
 #include <memory>
 #include <typeinfo>
+#include <stdexcept>
 #include <cstring>
 #include <type_traits>
-
-#include <stdexcept>
 
 #ifndef VARIANT_CAST_OPTIMIZATION
 #define VARIANT_CAST_OPTIMIZATION 0
 #endif
 
-namespace VariantInternal {
-    struct NoOperator {
+namespace VariantInternal
+{
+
+    struct NoOperator {};
+
+    template<typename T, typename R> NoOperator operator==(T, R);
+    template<typename T, typename R> NoOperator operator<(T, R);
+
+    template <typename T>
+    struct IsEqualOperatorExists
+    {
+        static const bool value = !std::is_same<NoOperator, decltype(*static_cast<T*>(0) == *static_cast<T*>(0))>::value;
     };
 
-    template<typename T, typename R>
-    NoOperator operator==(T, R);
-
-    template<typename T, typename R>
-    NoOperator operator<(T, R);
-
-    template<typename T>
-    struct IsEqualOperatorExists {
-        static const bool value = !std::is_same_v<NoOperator, decltype(*static_cast<T *>(0) == *static_cast<T *>(0))>;
-
-    };
-    template<typename T>
-    struct IsLessOperatorExists {
-        static const bool value = !std::is_same_v<NoOperator, decltype(*static_cast<T *>(0) < static_cast<T *>(0))>;
+    template <typename T>
+    struct IsLessOperatorExists
+    {
+        static const bool value = !std::is_same<NoOperator, decltype(*static_cast<T*>(0) < *static_cast<T*>(0))>::value;
     };
 
 }
 
-class Variant {
-public: // Constructors
-    Variant() {};
+/**
 
-    template<class T>
-    Variant(const T &v):
-            m_holder(std::make_shared <Holder < T >> (typeid(T).name(), v)) {}
+\brief The boost::any analog.
 
-    template<class T>
-    static  Variant From_value(const T& v) {
+Short example:
+
+\code
+    Variant v;
+    v = 10;
+    if (v.isType<int>())
+        cout << v.value<int>() << endl;
+\endcode
+
+*/
+class Variant
+{
+public:
+    Variant() {}
+
+    template <typename T>
+    explicit Variant(const T& v)
+            : holder_(std::make_shared<Holder<T>>(typeid(T).name(), v))
+    {
+    }
+
+    template <typename T>
+    static Variant fromValue(const T& v)
+    {
         Variant res;
-        res.m_holder = std::make_shared<Holder<T>>(typeid(T).name(), v);
+        res.holder_ = std::make_shared<Holder<T>>(typeid(T).name(), v);
         return res;
     }
 
-    void Clear() {
-        m_holder.reset();
+    void clear()
+    {
+        holder_.reset();
     }
 
-    template<class T>
-    bool Is_type() const {
+    template <typename T>
+    [[nodiscard]] bool isType() const
+    {
 #if VARIANT_CAST_OPTIMIZATION
-        return m_holder ? typeid(T).name() == m_holder->m_name : false;
+        return holder_ ? typeid(T).name() == holder_->name : false;
 #else
-        return m_holder ? ::strcmp(typeid(T).name(), m_holder->m_name) == 0 : false;
+        return holder_ ? ::strcmp(typeid(T).name(), holder_->name) == 0 : false;
 #endif
     }
 
+    template <typename T>
+    const T& valueRef() const
+    {
+        if (!isType<T>())
+            throw std::bad_cast();
+        return std::static_pointer_cast<Holder<T>>(holder_)->value;
+    }
+
+    template <typename T>
+    T value() const
+    {
+        if (!holder_)
+            return T();
+        else
+            return valueRef<T>();
+    }
+
+    template <typename T>
+    explicit operator T() const
+    {
+        return valueRef<T>();
+    }
+
+    template <typename T>
+    void setValue(const T& v)
+    {
+        holder_ = std::make_shared<Holder<T>>(typeid(T).name(), v);
+    }
+
+    template <typename T>
+    void operator=(const T& v)
+    {
+        setValue(v);
+    }
+
+    template <typename T>
+    bool tryGetValue(T*& val)
+    {
+        if (!isType<T>())
+            return false;
+        if (!holder_.unique())
+            holder_ = std::make_shared<Holder<T>>(typeid(T).name(), std::static_pointer_cast<Holder<T>>(holder_)->value);
+        val = &(std::static_pointer_cast<Holder<T>>(holder_)->value);
+        return true;
+    }
+
+    template <typename T>
+    bool tryGetValue(T& val)
+    {
+        return tryGetValue(&val);
+    }
+
+    [[nodiscard]] bool hasValue() const { return static_cast<bool>(holder_); }
+    [[nodiscard]] bool isEmpty() const { return !holder_; }
+
+    bool operator==(const Variant& other) const
+    {
+        return holder_->isEquals(other.holder_.get());
+    }
+
+    bool operator!=(const Variant& other) const
+    {
+        return !holder_->isEquals(other.holder_.get());
+    }
+
+    bool operator<(const Variant& other) const
+    {
+        return holder_->isLessThan(other.holder_.get());
+    }
+
+    bool operator>(const Variant& other) const
+    {
+        return other.holder_->isLessThan(holder_.get());
+    }
+
+    bool operator<=(const Variant& other) const
+    {
+        return !holder_->isLessThan(other.holder_.get());
+    }
+
+    bool operator>=(const Variant& other) const
+    {
+        return !other.holder_->isLessThan(holder_.get());
+    }
 
 private:
     template<class T, class Enable = void>
     struct IsEqual {
-        // Basic realization called if no equal operator defined
-        static bool Compire(const T &, const T &) {
+        // basic realization called if no equal operator defined
+        static bool compare(const T&, const T&)
+        {
             throw std::runtime_error("\"==\" operator is not defined for this type");
         }
     };
 
     template<class T>
-    struct IsEqual<T, typename std::enable_if_t<VariantInternal::IsEqualOperatorExists<T>::value> > {
-        // This realization called if equal operator defined
-        static bool Compare(const T &v1, const T &v2) {
+    struct IsEqual<T, typename std::enable_if<VariantInternal::IsEqualOperatorExists<T>::value >::type> {
+        // this realization called if equal operator defined
+        static bool compare(const T& v1, const T& v2)
+        {
             return v1 == v2;
         }
     };
 
     template<class T, class Enable = void>
     struct IsLessThan {
-        static bool Compare(const T &, const T &) {
+        static bool compare(const T&, const T&)
+        {
             throw std::runtime_error("\"<\" operator is not defined for this type");
         }
     };
 
     template<class T>
-    struct IsLessThan<T, typename std::enable_if_t<VariantInternal::IsLessOperatorExists<T>::value>> {
-        static bool Compare(const T &v1, const T &v2) {
+    struct IsLessThan<T, typename std::enable_if<VariantInternal::IsLessOperatorExists<T>::value >::type> {
+        static bool compare(const T& v1, const T& v2)
+        {
             return v1 < v2;
         }
     };
 
-    class HolderBase {
+    class HolderBase
+    {
     public:
-        HolderBase(const char *name) : m_name(name) {}
+        explicit HolderBase(const char* name) : name(name) {}
+        virtual ~HolderBase() = default;
+        const char* name;
 
-        virtual ~HolderBase() {}
-
-        const char *m_name;
-
-        bool Same_type(HolderBase *other) const {
+        bool sameType(HolderBase* other) const
+        {
 #if VARIANT_CAST_OPTIMIZATION
-            return m_name == other.>m_name;
+            return name == other->name;
 #else
-            return ::strcmp(m_name, other->m_name) == 0;
+            return ::strcmp(name, other->name) == 0;
 #endif
-
         }
 
-        virtual bool Is_equals(HolderBase *other) const = 0;
-
-        virtual bool Is_less_than(HolderBase *other) const = 0;
-
+        virtual bool isEquals(HolderBase* other) const = 0;
+        virtual bool isLessThan(HolderBase* other) const = 0;
     };
+    typedef std::shared_ptr<HolderBase> HolderPtr;
 
-    using HolderPtr = std::shared_ptr<HolderBase>;
-
-    template<class T>
-    class Holder : public HolderBase {
+    template <typename T>
+    class Holder : public HolderBase
+    {
     public:
-        Holder(const char *name, const T &v) :
-                HolderBase(name), m_value(v) {}
+        Holder(const char* name, const T& v)
+                : HolderBase(name)
+                , value(v)
+        {}
 
-
-        bool Is_equals(HolderBase *other) const override {
-            if (!Same_type(other)) return false;
-            return IsEqual<T>::Compare(m_value, static_cast<Holder<T> *>(other)->m_value);
+        bool isEquals(HolderBase* other) const override
+        {
+            if (!sameType(other))
+                return false;
+            return IsEqual<T>::compare(value, static_cast<Holder<T>*>(other)->value);
         }
 
-        bool Is_less_than(HolderBase *other) const override {
-            if (!Same_type(other)) throw std::runtime_error("Incompatible types");
-            return IsLessThan<T>::Compare(m_value, static_cast<Holder<T> *>(other)->m_value);
+        bool isLessThan(HolderBase* other) const override
+        {
+            if (!sameType(other))
+                throw std::runtime_error("Incompatible types");
+            return IsLessThan<T>::compare(value, static_cast<Holder<T>*>(other)->value);
         }
 
-
-        T m_value;
+        T value;
     };
 
-    HolderPtr m_holder;
-
+    HolderPtr holder_;
 };
