@@ -38,25 +38,25 @@ public:
 
     void Accepted();
 
-    void Send(std::string msg, int id);
+    void Send(const std::string& msg, int id);
 
-    void Detach(int id);
+    static void Detach(int id);
 
     void Clean(int id);
 
-    bool IsOnline();
+    static bool IsOnline();
 
     std::string GetIPAddr(int id);
 
-    int GetLastClosedSockets();
+    static int GetLastClosedSockets();
 
-    void Closed();
+    void Closed() const;
 
 
 private: // Fields
     int m_sockfd;
-    int m_n;
-    int m_pid;
+    [[maybe_unused]] int m_n;
+    [[maybe_unused]] int m_pid;
     sockaddr_in m_server_address;
     sockaddr_in m_client_address;
     pthread_t m_server_thread[MAX_CLIENT];
@@ -69,7 +69,7 @@ private: // Statics
     static bool m_is_online;
     static int m_last_closed;
     static int m_num_client;
-    static std::mutex mt;
+    static std::mutex m_mt;
 
     static void *Task(void *argv);
 

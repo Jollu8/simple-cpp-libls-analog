@@ -8,4 +8,6 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 endif()
 
 add_subdirectory(tcp/src)
+add_subdirectory(tcp/server)
+add_subdirectory(tcp/client)
 add_executable(CPP runs.cpp)

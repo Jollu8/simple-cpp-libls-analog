@@ -40,7 +40,7 @@ void *TCPServer::Task(void *argv) {
             }
             msg[n] = 0;
             desc->message = std::string(msg);
-            std::lock_guard<std::mutex> guard(mt);
+            std::lock_guard<std::mutex> guard(m_mt);
             m_Message.emplace_back(desc);
 
         }
@@ -91,5 +91,61 @@ int TCPServer::Setup(int port, std::vector<int> opts) {
 
 }
 
+void TCPServer::Accepted() {
+    socklen_t soSize = sizeof(m_client_address);
+    DescriptSocket *so = new DescriptSocket;
+    so->socket = accept(m_sockfd, (sockaddr *) &m_client_address, &soSize);
+    so->id = m_num_client;
+    so->ip = inet_ntoa(m_client_address.sin_addr);
+
+    m_new_sockfd.emplace_back(so);
+    std::cerr << "Accept client[ id:" << m_new_sockfd[m_num_client]->id
+              << " ip:" << m_new_sockfd[m_num_client]->ip
+              << " handle:" << m_new_sockfd[m_num_client]->socket << " ]" << std::endl;
+
+    pthread_create(&m_server_thread[m_num_client], nullptr, &Task, (void *) m_new_sockfd[m_num_client]);
+    m_is_online = true;
+    ++m_num_client;
+}
+
+
+std::vector<DescriptSocket*> TCPServer::GetMessage() {
+    std::lock_guard<std::mutex> guard(m_mt);
+    return m_Message;
+}
+
+void TCPServer::Send(const std::string& msg_, int id) {
+    send(m_new_sockfd[id]->socket, msg_.c_str(), msg_.size(), 0);
+}
+
+int TCPServer::GetLastClosedSockets() {
+    return m_last_closed;
+}
+
+void TCPServer::Clean(int id) {
+    m_Message[id] = nullptr;
+    memset(msg, 0, MAX_PACKET_SIZE);
+}
+
+std::string TCPServer::GetIPAddr(int id) {
+    return m_new_sockfd[id]->ip;
+}
+
+bool TCPServer::IsOnline() {
+    return m_is_online;
+}
+
+void TCPServer::Detach(int id) {
+    close(m_new_sockfd[id]->socket);
+    m_new_sockfd[id]->ip = "";
+    m_new_sockfd[id]->id = -1;
+    m_new_sockfd[id]->message = "";
+
+}
+
+
+void TCPServer::Closed() const {
+    close(m_sockfd);
+}
 
 

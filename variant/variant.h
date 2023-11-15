@@ -78,7 +78,7 @@ public:
     }
 
     template <typename T>
-    [[nodiscard]] bool isType() const
+   bool isType() const
     {
 #if VARIANT_CAST_OPTIMIZATION
         return holder_ ? typeid(T).name() == holder_->name : false;
