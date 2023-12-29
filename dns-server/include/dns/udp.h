@@ -15,9 +15,9 @@ namespace dnslib {
     template<std::derived_from<Lookup> L>
     class UdpNameServer {
     public:
-        UdpNameServer(boost::asio::io_service &io, int port, Responder<L> responder) :
-                m_socket(io, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v6(), port)),
-                m_responder(std::move(responder)) {
+        UdpNameServer(boost::asio::io_service &io, int port, Responder<L> responder) : m_socket(
+                io, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v6(), port)),
+            m_responder(std::move(responder)) {
             std::error_code const ignore_err;
             m_socket.set_option(boost::asio::ip::v6_only(false), (boost::system::error_code &) ignore_err);
         }
@@ -51,7 +51,7 @@ namespace dnslib {
             if (err) {
                 header.rcode = ResponseCode::RC_FORMAT_ERROR;
                 Message response = Message{
-                        .header = header
+                    .header = header
                 };
                 co_await m_socket.async_send_to(boost::asio::buffer(response.bytes()), m_remote_endpoint,
                                                 boost::asio::use_awaitable);

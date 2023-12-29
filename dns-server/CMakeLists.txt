@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.26)
 
 project("dns-lib")
 
-find_package(Boost  REQUIRED system )
+find_package(Boost REQUIRED system)
 
 #find_package(GTest CONFIG REQUIRED)
 find_package(argparse CONFIG REQUIRED)
@@ -15,28 +15,17 @@ endif ()
 
 #enable_testing()
 
-add_library("dns-lib" STATIC
-        src/data.cpp
-        src/error.cpp
-        src/lookup.cpp
-        src/resolver.cpp
-        src/static_lookup.cpp
-        include/dns/error.h
-        include/dns/buffer.h
-        include/dns/data.h
-        include/dns/lookup.h
-        include/dns/recursive_lookup.h
-        include/dns/resolver.h
-        include/dns/responder.h
-        include/dns/static_lookup.h
-        include/dns/udp.h
+file(GLOB ${SOURCE} "*.cpp")
+file(GLOB ${HEADERS} "*.h")
+add_executable("dns-lib"
+        ${SOURCE}
+        ${HEADERS}
 )
-
 set_property(TARGET "dns-lib" PROPERTY CXX_STANDARD 20)
 target_include_directories("dns-lib" PUBLIC include)
 target_include_directories("dns-lib" PRIVATE include/dns)
 
-target_link_libraries("dns-lib" PRIVATE Boost::system )
+target_link_libraries("dns-lib" PRIVATE Boost::system)
 
 
 #add_executable(dns_lib_test
