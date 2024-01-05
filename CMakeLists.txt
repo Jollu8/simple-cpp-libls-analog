@@ -13,4 +13,4 @@ endif()
 #add_executable(CPP runs.cpp)
 #add_subdirectory(async_socket)
 
-add_subdirectory(dns-resolver)
+add_subdirectory(dns-server)

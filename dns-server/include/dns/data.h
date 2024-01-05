@@ -96,6 +96,8 @@ namespace dnslib {
     };
 
     struct Header {
+        uint16_t id;
+
         uint16_t qr: 1 = 0;
         Opcode opcode : 4;
         uint32_t aa : 1 = 0;

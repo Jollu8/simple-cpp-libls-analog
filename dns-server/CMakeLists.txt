@@ -15,11 +15,24 @@ endif ()
 
 #enable_testing()
 
-file(GLOB ${SOURCE} "*.cpp")
-file(GLOB ${HEADERS} "*.h")
+
 add_executable("dns-lib"
-        ${SOURCE}
-        ${HEADERS}
+        include/dns/buffer.h
+        include/dns/data.h
+        include/dns/error.h
+        include/dns/lookup.h
+        include/dns/recursive_lookup.h
+        include/dns/resolver.h
+        include/dns/responder.h
+        include/dns/static_lookup.h
+        include/dns/udp.h
+
+        src/data.cpp
+        src/error.cpp
+        src/lookup.cpp
+        src/recursive_lookup.cpp
+        src/resolver.cpp
+        src/static_lookup.cpp
 )
 set_property(TARGET "dns-lib" PROPERTY CXX_STANDARD 20)
 target_include_directories("dns-lib" PUBLIC include)
